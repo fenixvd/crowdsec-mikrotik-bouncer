@@ -77,7 +77,7 @@
 Предполагается: машина с Docker в LAN, MikroTik RouterOS 7.x с белым IP, `interface-list` **WAN** уже настроен.
 
 ```bash
-git clone <this-repo> crowdsec-mikrotik-bouncer
+git clone https://github.com/fenixvd/crowdsec-mikrotik-bouncer.git
 cd crowdsec-mikrotik-bouncer
 
 # 1. конфиги из примеров
