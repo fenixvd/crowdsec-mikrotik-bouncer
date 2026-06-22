@@ -1,6 +1,9 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
 ![MikroTik](https://img.shields.io/badge/RouterOS-7.x-green)
+
+🇷🇺 **Русский** | 🇬🇧 [English](README.en.md)
+
 # CrowdSec → MikroTik bouncer
 
 Баним сканеров и веб-злодеев **прямо на роутере MikroTik**: CrowdSec читает логи
