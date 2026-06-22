@@ -1,0 +1,19 @@
+# секреты и локальный стейт
+.env
+notify.env
+
+# рантайм CrowdSec
+crowdsec/data/
+crowdsec/acquis.d/traefik.yaml      # генерится из .example под ваш путь к логам Traefik
+crowdsec/parsers/s02-enrich/my-whitelist.yaml
+
+# локально сгенерённые конфиги из примеров
+crowdsec/config.yaml
+
+# прочее
+*.bak
+*.tmp
+logs/
+state/
+__pycache__/
+*.pyc

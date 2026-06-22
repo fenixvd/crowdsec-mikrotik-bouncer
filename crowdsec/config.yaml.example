@@ -1,0 +1,30 @@
+# Минимально-релевантные правки к дефолтному config.yaml CrowdSec.
+# Скопируйте в config.yaml. Если у вас уже есть свой config.yaml — просто
+# перенесите в него блоки db_config.use_wal и prometheus.
+#
+#   cp crowdsec/config.yaml.example crowdsec/config.yaml
+
+common:
+  daemonize: true
+  log_media: stdout
+  log_level: info
+
+config_paths:
+  config_dir: /etc/crowdsec/
+  data_dir: /var/lib/crowdsec/data/
+
+db_config:
+  type: sqlite
+  db_path: /var/lib/crowdsec/data/crowdsec.db
+  use_wal: true            # ВАЖНО: без WAL заливка community (~25k) лочит SQLite
+
+api:
+  server:
+    listen_uri: 0.0.0.0:8080      # баунсеры ходят к LAPI по docker-сети (crowdsec:8080)
+    profiles_path: /etc/crowdsec/profiles.yaml
+
+prometheus:
+  enabled: true
+  level: full              # full = разбивка по сценариям/парсерам/источникам (нужно для дашбордов)
+  listen_addr: 0.0.0.0     # внутри docker-сети; наружу 6060 НЕ публикуем
+  listen_port: 6060

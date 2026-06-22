@@ -1,0 +1,16 @@
+onsuccess: next_stage
+filter: "evt.Line.Labels.type == 'mikrotik'"
+name: custom/mikrotik-firewall
+description: "Parse MikroTik firewall drops, extract attacker source IP"
+nodes:
+  - grok:
+      # под формат строки RouterOS: "... proto TCP (SYN), 1.2.3.4:5678->WAN_IP:443, len 52"
+      pattern: '%{TIMESTAMP_ISO8601:mt_time} %{NOTSPACE:mt_host} firewall,%{NOTSPACE:mt_sev} %{NOTSPACE:mt_prefix} %{WORD:mt_chain}: %{DATA:mt_mid}proto %{DATA:mt_proto}, %{IPV4:source_ip}:%{INT:mt_sport}->%{IPV4:mt_dip}:%{INT:dest_port}, len %{INT:mt_len}'
+      apply_on: Line.Raw
+    statics:
+      - meta: log_type
+        value: mikrotik_fw_drop
+      - meta: source_ip
+        expression: evt.Parsed.source_ip
+      - meta: dest_port
+        expression: evt.Parsed.dest_port

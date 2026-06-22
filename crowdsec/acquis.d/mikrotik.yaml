@@ -1,0 +1,6 @@
+# Логи дропов файрвола MikroTik (прилетают по syslog в /var/log/mikrotik.log на хосте,
+# смонтирован в контейнер как /hostlog).
+filenames:
+  - /hostlog/mikrotik.log
+labels:
+  type: mikrotik

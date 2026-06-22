@@ -1,0 +1,12 @@
+type: leaky
+name: custom/mikrotik-port-scan
+description: "Ban IPs repeatedly hitting the WAN (MikroTik firewall drops)"
+filter: "evt.Meta.log_type == 'mikrotik_fw_drop'"
+groupby: "evt.Meta.source_ip"
+capacity: 2          # 3-й «стук» переполняет ведро -> бан
+leakspeed: "60s"     # ведро подтекает: 1 событие в минуту прощается
+blackhole: 5m        # не плодить дубли решений
+labels:
+  type: scan
+  remediation: true
+  service: mikrotik

@@ -1,0 +1,7 @@
+# Веб-детект (Часть 3). Раскомментируйте монтирование логов Traefik в docker-compose.yml
+# (crowdsec -> /logs/traefik:ro), затем:
+#   cp crowdsec/acquis.d/traefik.yaml.example crowdsec/acquis.d/traefik.yaml
+filenames:
+  - /logs/traefik/access.log
+labels:
+  type: traefik

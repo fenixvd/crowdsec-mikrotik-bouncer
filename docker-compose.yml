@@ -1,0 +1,149 @@
+# CrowdSec -> MikroTik bouncer
+#
+# Группы запуска:
+#   (обычная)   docker compose up -d
+#                 -> crowdsec + bouncer-local  (БЕЗ community, БЕЗ мониторинга)
+#   full        docker compose --profile full up -d
+#                 -> всё: + bouncer-community + prometheus/grafana/node-exporter/cadvisor
+#
+# Точечно (можно комбинировать):
+#   docker compose --profile community  up -d    # добавить community-баунсер
+#   docker compose --profile monitoring up -d    # добавить мониторинг
+#
+# community по умолчанию НЕ поднимается: список большой, слабые роутеры могут
+# задохнуться (см. README). Включайте осознанно через профиль community или full.
+#
+# Перед стартом: cp .env.example .env и заполнить.
+
+services:
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    # без профиля -> входит в «обычную» (поднимается всегда)
+    restart: unless-stopped
+    environment:
+      COLLECTIONS: "crowdsecurity/linux crowdsecurity/traefik"
+      NO_HUB_UPGRADE: "true"          # не зависать на hub-upgrade при старте на нестабильном линке
+    volumes:
+      - ./crowdsec/config.yaml:/etc/crowdsec/config.yaml
+      - ./crowdsec/acquis.d:/etc/crowdsec/acquis.d
+      - ./crowdsec/parsers:/etc/crowdsec/parsers
+      - ./crowdsec/scenarios:/etc/crowdsec/scenarios
+      - cs-data:/var/lib/crowdsec/data
+      # ВАЖНО: монтируем КАТАЛОГ логов, а не файл (иначе ротация отвяжет контейнер от живого лога)
+      - /var/log:/hostlog:ro
+      # лог Traefik (Часть 3) — раскомментируйте, если используете веб-детект:
+      # - /path/to/traefik/logs:/logs/traefik:ro
+    networks: [csnet]
+    # LAPI наружу не публикуем — баунсеры ходят к нему по docker-сети.
+    # Метрики Prometheus (6060) тоже только внутри сети.
+
+  bouncer-local:
+    build: ./bouncer
+    image: cs-mikrotik-bouncer:latest
+    container_name: cs-bouncer-local
+    # без профиля -> входит в «обычную» (поднимается всегда)
+    restart: unless-stopped
+    environment:
+      ROLE: "local"
+      CROWDSEC_URL: "http://crowdsec:8080"
+      CROWDSEC_BOUNCER_API_KEY: "${BOUNCER_KEY}"
+      MIKROTIK_HOST: "${ROUTER_IP}:8728"
+      MIKROTIK_USER: "${MIKROTIK_USER}"
+      MIKROTIK_PASS: "${MIKROTIK_PASS}"
+      LIST_PREFIX: "crowdsec"
+    volumes: ["bouncer-state:/app/state"]
+    depends_on: [crowdsec]
+    networks: [csnet]
+
+  bouncer-community:
+    image: cs-mikrotik-bouncer:latest      # тот же образ, что собрал bouncer-local
+    container_name: cs-bouncer-community
+    profiles: ["community", "full"]        # по умолчанию НЕ поднимается (см. README)
+    restart: unless-stopped
+    environment:
+      ROLE: "community"
+      CROWDSEC_URL: "http://crowdsec:8080"
+      CROWDSEC_BOUNCER_API_KEY: "${BOUNCER_KEY}"
+      MIKROTIK_HOST: "${ROUTER_IP}:8728"
+      MIKROTIK_USER: "${MIKROTIK_USER}"
+      MIKROTIK_PASS: "${MIKROTIK_PASS}"
+      LIST_PREFIX: "crowdsec"
+    volumes: ["bouncer-state:/app/state"]
+    depends_on: [crowdsec, bouncer-local]
+    networks: [csnet]
+
+  # --- мониторинг (Часть 4) -------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: crowdsec-prometheus
+    profiles: ["monitoring", "full"]
+    restart: unless-stopped
+    command: ['--config.file=/etc/prometheus/prometheus.yml']
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom-data:/prometheus
+    networks: [csnet]
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: crowdsec-grafana
+    profiles: ["monitoring", "full"]
+    restart: unless-stopped
+    depends_on: [prometheus]
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks: [csnet]
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    profiles: ["monitoring", "full"]
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+
+  # cadvisor ПРОЖОРЛИВ (сотни МБ RAM + постоянная нагрузка на CPU от обхода cgroups).
+  # На слабой VPS/мини-ПК не обязателен: node-exporter лёгкий и даёт картину по хосту,
+  # а разбивку по контейнерам можно смотреть разово через `docker stats`.
+  # Если оставляете — аппетит прижимают флаги ниже (housekeeping_interval, docker_only)
+  # и лимит памяти (mem_limit).
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    profiles: ["monitoring", "full"]
+    restart: unless-stopped
+    privileged: true
+    command:
+      - '--housekeeping_interval=30s'
+      - '--docker_only=true'
+    mem_limit: 256m
+    devices: [ /dev/kmsg ]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [csnet]
+
+networks:
+  csnet:
+    name: crowdsec-net
+
+volumes:
+  cs-data:
+  bouncer-state:
+  prom-data:
+  grafana-data:

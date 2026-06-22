@@ -1,0 +1,13 @@
+# /etc/logrotate.d/mikrotik
+# ВАЖНО: НЕ используйте copytruncate (rsyslog держит файл открытым -> sparse-файл с нулями).
+# Правильно: create + HUP rsyslog (он переоткроет файл).
+/var/log/mikrotik.log {
+    daily
+    rotate 14
+    missingok
+    notifempty
+    create
+    postrotate
+        /usr/bin/systemctl kill -s HUP rsyslog.service 2>/dev/null || true
+    endscript
+}

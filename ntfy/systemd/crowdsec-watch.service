@@ -1,0 +1,7 @@
+[Unit]
+Description=CrowdSec health watch -> ntfy
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/crowdsec-mikrotik-bouncer/ntfy/crowdsec-watch.sh

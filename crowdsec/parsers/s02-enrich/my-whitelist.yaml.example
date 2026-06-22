@@ -1,0 +1,17 @@
+# Не банить свою инфраструктуру. КРИТИЧНО: без этого CrowdSec легко забанит
+# ваш VPN-выход / CDN / пиров и отрежет вам доступ.
+#   cp my-whitelist.yaml.example my-whitelist.yaml  и впишите свои адреса.
+#
+# Вайтлист гасит только НОВЫЕ баны; уже существующие снимать руками:
+#   docker exec crowdsec cscli decisions delete --ip <IP>
+name: me/my-whitelist
+description: "Не банить свою инфраструктуру"
+whitelist:
+  reason: "my own infra"
+  ip:
+    - "203.0.113.10"          # ваш белый WAN-IP дома
+    - "203.0.113.20"          # IP VPN-выхода / прочее по необходимости
+  cidr:
+    - "100.64.0.0/10"         # напр. CGNAT/мобильный пул, если нужно
+  expression:
+    - "evt.Enriched.ASNumber == '15169'"   # напр. Google/YouTube-контент (свой кейс)
