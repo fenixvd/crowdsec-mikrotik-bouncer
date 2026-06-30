@@ -1,0 +1,28 @@
+name: custom_local_remediation
+# Our own custom/* detections (mikrotik port-scan, ipsec bruteforce, any custom
+# http rule): short-lived bans so the local lists turn over quickly.
+filters:
+ - Alert.Remediation == true && Alert.GetScope() in ["Ip", "Range"] && Alert.GetScenario() startsWith "custom/"
+decisions:
+ - type: ban
+   duration: 6h
+on_success: break
+---
+name: default_ip_remediation
+# Everything else decided locally (CrowdSec hub scenarios, e.g. http-cve on NPM
+# logs): longer bans. CAPI/community decisions bypass profiles and keep their
+# own durations.
+filters:
+ - Alert.Remediation == true && Alert.GetScope() == "Ip"
+decisions:
+ - type: ban
+   duration: 24h
+on_success: break
+---
+name: default_range_remediation
+filters:
+ - Alert.Remediation == true && Alert.GetScope() == "Range"
+decisions:
+ - type: ban
+   duration: 24h
+on_success: break
