@@ -22,6 +22,8 @@ api:
   server:
     listen_uri: 0.0.0.0:8080      # баунсеры ходят к LAPI по docker-сети (crowdsec:8080)
     profiles_path: /etc/crowdsec/profiles.yaml
+    online_client:
+      credentials_path: /etc/crowdsec//online_api_credentials.yaml
 
 prometheus:
   enabled: true
