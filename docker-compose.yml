@@ -26,6 +26,7 @@ services:
       NO_HUB_UPGRADE: "true"          # не зависать на hub-upgrade при старте на нестабильном линке
     volumes:
       - ./crowdsec/config.yaml:/etc/crowdsec/config.yaml
+      - ./crowdsec/profiles.yaml:/etc/crowdsec/profiles.yaml
       - ./crowdsec/acquis.d:/etc/crowdsec/acquis.d
       - ./crowdsec/parsers:/etc/crowdsec/parsers
       - ./crowdsec/scenarios:/etc/crowdsec/scenarios
